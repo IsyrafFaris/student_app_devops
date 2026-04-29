@@ -36,17 +36,19 @@ pipeline {
         stage('Cleanup Old Container') {
             steps {
                 bat '''
-                    echo Cleaning up existing container...
-                    docker ps -a --filter "name=student-app" --format "{{.ID}}" > container_id.txt
-                    set /p CONTAINER_ID=<container_id.txt
-                    if defined CONTAINER_ID (
-                        docker stop %CONTAINER_ID% 2>nul
-                        docker rm %CONTAINER_ID% 2>nul
-                        echo Removed existing container
-                    ) else (
-                        echo No existing container found
+                    echo Cleaning up containers...
+                    REM Stop and remove container if exists
+                    docker stop student-app 2>nul
+                    docker rm student-app 2>nul
+                    
+                    REM Find and kill any container using port 8081
+                    for /f "tokens=*" %%i in ('docker ps -q --filter "publish=8081"') do (
+                        echo Stopping container %%i that uses port 8081
+                        docker stop %%i 2>nul
+                        docker rm %%i 2>nul
                     )
-                    del container_id.txt 2>nul
+                    
+                    echo Cleanup completed
                 '''
             }
         }
@@ -54,7 +56,7 @@ pipeline {
         stage('Run Container') {
             steps {
                 bat "docker run -d -p ${HOST_PORT}:${CONTAINER_PORT} --name student-app ${APP_NAME}:latest"
-                bat 'echo Container started successfully on port 8081'
+                bat 'echo Container started on port 8081'
             }
         }
         
@@ -62,6 +64,7 @@ pipeline {
             steps {
                 bat 'timeout /t 3 /nobreak > nul'
                 bat 'docker ps --filter "name=student-app"'
+                bat 'echo App is running on http://localhost:8081'
             }
         }
     }
@@ -71,10 +74,10 @@ pipeline {
             echo 'Pipeline finished'
         }
         success {
-            echo " Build and deployment successful! App running on http://localhost:8081"
+            echo '✅ Build and deployment successful!'
         }
         failure {
-            echo ' Pipeline failed. Check logs above.'
+            echo '❌ Pipeline failed. Check logs above.'
         }
     }
 }

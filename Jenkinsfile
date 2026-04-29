@@ -166,47 +166,69 @@ pipeline {
         }
 
         stage('✅ Verify Deployment') {
-            steps {
-                echo 'Verifying Kubernetes deployment...'
-                bat '''
-                    echo ========================================
-                    echo PODS STATUS:
-                    echo ========================================
-                    kubectl get pods
-                    
-                    echo.
-                    echo ========================================
-                    echo SERVICES STATUS:
-                    echo ========================================
-                    kubectl get svc
-                    
-                    echo.
-                    echo ========================================
-                    echo DEPLOYMENT DETAILS:
-                    echo ========================================
-                    kubectl get deployment springboot-app
-                    
-                    echo.
-                    echo ========================================
-                    echo ACCESS INFORMATION:
-                    echo ========================================
-                    echo Application is accessible at:
-                    echo - NodePort: 30082
-                    echo - URL: http://localhost:30082
-                    echo.
-                    
-                    echo Testing application endpoint...
-                    curl -I http://localhost:30082/hello 2>nul
-                    
-                    if %errorlevel% equ 0 (
-                        echo Application is responding
-                    ) else (
-                        echo Service may still be starting up
-                    )
-                '''
-            }
-        }
+    steps {
+        echo 'Verifying Kubernetes deployment...'
+        bat '''
+            echo ========================================
+            echo PODS STATUS:
+            echo ========================================
+            kubectl get pods
+            
+            echo.
+            echo ========================================
+            echo SERVICES STATUS:
+            echo ========================================
+            kubectl get svc
+            
+            echo.
+            echo ========================================
+            echo DEPLOYMENT DETAILS:
+            echo ========================================
+            kubectl get deployment springboot-app
+            
+            echo.
+            echo ========================================
+            echo ACCESS INFORMATION:
+            echo ========================================
+            echo Application is accessible at:
+            echo - NodePort: 30082
+            echo - URL: http://localhost:30082
+            echo.
+            
+            echo Waiting for application to be ready...
+            timeout /t 10 /nobreak > nul
+            
+            echo Testing application endpoint...
+            
+            REM Test root endpoint
+            echo Testing http://localhost:30082/
+            curl -s -o nul -w "%%{http_code}" http://localhost:30082/ > status.txt
+            set /p STATUS=<status.txt
+            if "%STATUS%"=="200" (
+                echo ✓ Application is responding on root endpoint
+            ) else (
+                echo Application returned status: %STATUS%
+            )
+            
+            REM Test health endpoint if available
+            echo Testing http://localhost:30082/actuator/health
+            curl -s -o nul -w "%%{http_code}" http://localhost:30082/actuator/health > status2.txt 2>nul
+            set /p STATUS2=<status2.txt
+            if "%STATUS2%"=="200" (
+                echo ✓ Health check passed
+            ) else (
+                echo Health endpoint not available (this is optional)
+            )
+            
+            REM Show pod logs for debugging
+            echo.
+            echo ========================================
+            echo POD LOGS (last 20 lines):
+            echo ========================================
+            kubectl logs --tail=20 -l app=springboot-app
+        '''
     }
+}
 
     post {
         always {

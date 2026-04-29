@@ -32,12 +32,16 @@ pipeline {
         }
 
         stage('Run Container') {
-            steps {
-                bat 'docker stop student-app || ver > nul'
-                bat 'docker rm student-app || ver > nul'
-                bat "docker run -d -p 8081:8080 --name student-app ${APP_NAME}:latest"
-            }
-        }
+    steps {
+        bat 'echo "Cleaning up existing container..."'
+        bat 'docker ps -a --filter "name=student-app" --format "{{.ID}}" > container_id.txt'
+        bat 'for /f %i in (container_id.txt) do docker stop %i || ver > nul'
+        bat 'for /f %i in (container_id.txt) do docker rm %i || ver > nul'
+        bat 'del container_id.txt'
+        bat 'echo "Starting new container on port 8081..."'
+        bat "docker run -d -p 8081:8080 --name student-app student-app:latest"
+    }
+}
     }
 
     post {

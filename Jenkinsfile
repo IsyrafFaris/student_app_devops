@@ -53,48 +53,8 @@ pipeline {
                     
                     echo Waiting for deployment to be ready...
                     kubectl rollout status deployment/springboot-app --timeout=120s
-                '''
-            }
-        }
-
-        stage('Verify Deployment') {
-            steps {
-                bat '''
-                    echo ========================================
-                    echo VERIFYING KUBERNETES DEPLOYMENT
-                    echo ========================================
                     
-                    echo.
-                    echo [1/5] Checking pods...
-                    kubectl get pods
-                    
-                    echo.
-                    echo [2/5] Checking services...
-                    kubectl get svc
-                    
-                    echo.
-                    echo [3/5] Checking deployment...
-                    kubectl get deployment springboot-app
-                    
-                    echo.
-                    echo [4/5] Waiting for application to initialize...
-                    timeout /t 15 /nobreak > nul
-                    
-                    echo.
-                    echo [5/5] Testing application access...
-                    
-                    REM Test with curl and ignore errors
-                    curl -s -o nul -w "HTTP Status: %%{http_code}\\n" http://localhost:30082/ || echo Service is starting up...
-                    
-                    echo.
-                    echo ========================================
-                    echo DEPLOYMENT INFORMATION
-                    echo ========================================
-                    echo Application is deployed successfully!
-                    echo Access URL: http://localhost:30082
-                    echo.
-                    echo To view logs: kubectl logs -l app=springboot-app
-                    echo To see pods: kubectl get pods -w
+                    echo Deployment completed successfully
                 '''
             }
         }

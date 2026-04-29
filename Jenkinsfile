@@ -37,11 +37,9 @@ pipeline {
             steps {
                 bat '''
                     echo Cleaning up containers...
-                    REM Stop and remove container if exists
                     docker stop student-app 2>nul
                     docker rm student-app 2>nul
                     
-                    REM Find and kill any container using port 8081
                     for /f "tokens=*" %%i in ('docker ps -q --filter "publish=8081"') do (
                         echo Stopping container %%i that uses port 8081
                         docker stop %%i 2>nul
@@ -57,14 +55,6 @@ pipeline {
             steps {
                 bat "docker run -d -p ${HOST_PORT}:${CONTAINER_PORT} --name student-app ${APP_NAME}:latest"
                 bat 'echo Container started on port 8081'
-            }
-        }
-        
-        stage('Verify Container') {
-            steps {
-                bat 'timeout /t 3 /nobreak > nul'
-                bat 'docker ps --filter "name=student-app"'
-                bat 'echo App is running on http://localhost:8081'
             }
         }
     }
